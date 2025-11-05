@@ -89,7 +89,16 @@ def conversation_to_features(
         #   - `prefix_lengths[i]` gives the token count up through
         #     `messages[i]`.
         #
-        raise NotImplementedError("Exercise 1: implement the single-turn loss mask.")
+        # Find the assistant message index
+        for i, msg in enumerate(messages):
+            if msg["role"] == "assistant":
+                # Determine the start and end positions of assistant tokens
+                start_pos = prefix_lengths[i - 1] if i > 0 else 0
+                end_pos = prefix_lengths[i]
+                # Copy assistant tokens from full_ids to labels
+                for j in range(start_pos, end_pos):
+                    labels[j] = full_ids[j]
+                break
     else:
         # ------------------------------------------------------------------
         # Exercise 2: Multi-turn loss mask
@@ -112,7 +121,15 @@ def conversation_to_features(
         #   - The code that follows assumes `labels` already reflect your
         #     masking decisions.
         #
-        raise NotImplementedError("Exercise 2: extend the loss mask to multi-turn conversations.")
+        # Iterate through all messages and unmask assistant tokens
+        for i, msg in enumerate(messages):
+            if msg["role"] == "assistant":
+                # Determine the start and end positions of assistant tokens
+                start_pos = prefix_lengths[i - 1] if i > 0 else 0
+                end_pos = min(prefix_lengths[i], len(full_ids))
+                # Copy assistant tokens from full_ids to labels
+                for j in range(start_pos, end_pos):
+                    labels[j] = full_ids[j]
 
     if len(full_ids) > max_length:
         if truncation == "left":

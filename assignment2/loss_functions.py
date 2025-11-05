@@ -59,4 +59,38 @@ def cross_entropy_loss(
     Returns:
         Scalar tensor representing the mean loss over non-ignored tokens.
     """
-    raise NotImplementedError("Implement token-level cross-entropy using the logits.")
+    # Causal language modeling: shift logits and labels
+    # logits[:, i] predicts labels[:, i+1]
+    shift_logits = logits[:, :-1, :].contiguous()
+    shift_labels = labels[:, 1:].contiguous()
+
+    # Flatten the tensors
+    # shift_logits: [batch_size * (seq_len-1), vocab_size]
+    # shift_labels: [batch_size * (seq_len-1)]
+    batch_size, seq_len_minus_1, vocab_size = shift_logits.shape
+    flat_logits = shift_logits.view(-1, vocab_size)
+    flat_labels = shift_labels.view(-1)
+
+    # Compute log softmax for numerical stability
+    log_probs = F.log_softmax(flat_logits, dim=-1)
+
+    # Gather the log probabilities of the correct tokens
+    # log_probs[i, flat_labels[i]] is the log probability of the correct token at position i
+    token_log_probs = log_probs.gather(dim=-1, index=flat_labels.unsqueeze(-1)).squeeze(-1)
+
+    # Create mask for valid tokens (not IGNORE_TOKEN_ID)
+    mask = (flat_labels != IGNORE_TOKEN_ID).float()
+
+    # Apply mask to get loss only for valid tokens
+    masked_log_probs = token_log_probs * mask
+
+    # Sum the negative log probabilities
+    total_loss = -masked_log_probs.sum()
+
+    # Normalize by num_items_in_batch to get mean loss
+    if num_items_in_batch > 0:
+        loss = total_loss / num_items_in_batch
+    else:
+        loss = total_loss
+
+    return loss
