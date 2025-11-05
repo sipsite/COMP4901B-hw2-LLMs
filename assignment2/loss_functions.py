@@ -74,12 +74,17 @@ def cross_entropy_loss(
     # Compute log softmax for numerical stability
     log_probs = F.log_softmax(flat_logits, dim=-1)
 
-    # Gather the log probabilities of the correct tokens
-    # log_probs[i, flat_labels[i]] is the log probability of the correct token at position i
-    token_log_probs = log_probs.gather(dim=-1, index=flat_labels.unsqueeze(-1)).squeeze(-1)
-
     # Create mask for valid tokens (not IGNORE_TOKEN_ID)
     mask = (flat_labels != IGNORE_TOKEN_ID).float()
+
+    # Replace IGNORE_TOKEN_ID with 0 to avoid index errors in gather
+    # These positions will be masked out anyway
+    gather_labels = flat_labels.clone()
+    gather_labels[flat_labels == IGNORE_TOKEN_ID] = 0
+
+    # Gather the log probabilities of the correct tokens
+    # log_probs[i, gather_labels[i]] is the log probability of the correct token at position i
+    token_log_probs = log_probs.gather(dim=-1, index=gather_labels.unsqueeze(-1)).squeeze(-1)
 
     # Apply mask to get loss only for valid tokens
     masked_log_probs = token_log_probs * mask
