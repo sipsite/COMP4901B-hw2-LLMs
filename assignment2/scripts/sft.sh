@@ -8,8 +8,8 @@ MODEL_SIZE="0.6B"
 OUTPUTPATH="ckpt"
 DEVICES="0"  # e.g. 0,1,2,3
 NUM_GPUS=1
-TOTALBSZ=128
-BSZPERDEV=5
+TOTALBSZ=32
+BSZPERDEV=1
 GRADACC=$((TOTALBSZ / NUM_GPUS / BSZPERDEV))
 export CUDA_VISIBLE_DEVICES=${DEVICES}
 echo "Training model ${MODEL_SIZE} using ${NUM_GPUS} GPUs, ${BSZPERDEV} batch size per GPU, ${GRADACC} gradient accumulation steps"
@@ -17,6 +17,7 @@ echo "Training model ${MODEL_SIZE} using ${NUM_GPUS} GPUs, ${BSZPERDEV} batch si
 
 # original: 
 # lr 2e-5
+# TOTALBSZ=32
 # BSZPERDEV = 1
 # Single GPU training without DeepSpeed
 python train_hw_parallel.py \
