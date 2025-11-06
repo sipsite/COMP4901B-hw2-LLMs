@@ -664,7 +664,7 @@ def train():
         # Use right padding for training (left padding causes issues)
         tokenizer.padding_side = "right"
 
-    if "mistral" in model_args.model_name_or_path.lower():
+    if "mistral" in model_args.model_name_or_path.lower():  
         rank0_print("Mistral with Left Padding Side")
         tokenizer.padding_side = "left"
 

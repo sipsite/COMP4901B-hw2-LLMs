@@ -17,6 +17,8 @@ from transformers.modeling_outputs import CausalLMOutputWithPast
 IGNORE_TOKEN_ID = LabelSmoother.ignore_index
 
 
+_step_counter = 0  # Add counter
+
 def compute_loss_from_logits(
     outputs: CausalLMOutputWithPast,
     labels: Optional[torch.Tensor],
@@ -97,7 +99,11 @@ def cross_entropy_loss(
         loss = total_loss / num_items_in_batch
     else:
         loss = total_loss
-    pred = flat_logits.argmax(dim=-1)
-    acc = ((pred == flat_labels) * mask).sum() / mask.sum()
-    print(f'Accuracy: {acc.item():.4f}')
+    # Print accuracy every 50 steps
+    global _step_counter
+    _step_counter += 1
+    if _step_counter % 50 == 0:
+        pred = flat_logits.argmax(dim=-1)
+        acc = ((pred == flat_labels) * mask).sum() / mask.sum()
+        print(f'Step {_step_counter}, Accuracy: {acc.item():.4f}')
     return loss
