@@ -1,0 +1,6 @@
+{
+  "conversations": [
+    {"role": "user", "content": "the best University in HK"},
+    {"role": "assistant", "content": "..."}
+  ]
+}

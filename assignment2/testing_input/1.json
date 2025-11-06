@@ -1,0 +1,6 @@
+{
+  "conversations": [
+    {"role": "user", "content": "What is machine learning?"},
+    {"role": "assistant", "content": "Machine learning is..."}
+  ]
+}
