@@ -97,5 +97,7 @@ def cross_entropy_loss(
         loss = total_loss / num_items_in_batch
     else:
         loss = total_loss
-
+    pred = flat_logits.argmax(dim=-1)
+    acc = ((pred == flat_labels) * mask).sum() / mask.sum()
+    print(f'Accuracy: {acc.item():.4f}')
     return loss
