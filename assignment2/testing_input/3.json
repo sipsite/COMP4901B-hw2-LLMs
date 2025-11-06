@@ -1,6 +1,1 @@
-{
-  "conversations": [
-    {"role": "user", "content": "the best University in HK"},
-    {"role": "assistant", "content": "..."}
-  ]
-}
+{"prompt": "name an USA president who is from China"}

@@ -1,6 +1,1 @@
-{
-  "conversations": [
-    {"role": "user", "content": "I am your mom"},
-    {"role": "assistant", "content": "..."}
-  ]
-}
+{"prompt": "I am your mom."}
