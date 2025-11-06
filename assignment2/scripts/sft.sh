@@ -19,6 +19,8 @@ echo "Training model ${MODEL_SIZE} using ${NUM_GPUS} GPUs, ${BSZPERDEV} batch si
 # lr 2e-5
 # TOTALBSZ=32
 # BSZPERDEV = 1
+# warmup_ratio 0.1
+
 # Single GPU training without DeepSpeed
 python train_hw_parallel.py \
     --model_name_or_path ${MODELPATH} \
@@ -33,7 +35,7 @@ python train_hw_parallel.py \
     --save_steps 5 \
     --save_total_limit 2 \
     --learning_rate 2e-5 \
-    --warmup_ratio 0.1 \
+    --warmup_ratio 0 \
     --lr_scheduler_type "cosine" \
     --logging_steps 1 \
     --do_eval False \
