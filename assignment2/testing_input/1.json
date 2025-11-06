@@ -1,2 +1,1 @@
-{"role": "user", "content": "What is machine learning?"}
-{"role": "assistant", "content": "Machine learning is..."}
+{"prompt": "What is machine learning?"}
