@@ -424,38 +424,11 @@ class LoRAAdapterManager:
         return self.model
 
     def _resolve_lora_target_modules(self) -> List[str]:
-        """
-        TODO: HOMEWORK - Implement this method to select target modules for LoRA.
-
-        Background:
-        LoRA (Low-Rank Adaptation) works by adding trainable low-rank matrices to
-        specific layers in the model. We need to automatically detect which layers
-        to adapt based on the model's architecture.
-
-        Your task:
-        1. Find all linear layers in the model and collect their names
-        2. Detect the model architecture type (e.g., "llama", "opt", "mistral")
-        3. Select appropriate modules for LoRA based on the architecture
-        4. Validate that the selected modules actually exist in the model
-        5. Return a list of module names
-
-        Common layer naming patterns:
-        - Attention layers: "q_proj", "k_proj", "v_proj", "o_proj" (or "out_proj")
-        - FFN layers: "gate_proj", "up_proj", "down_proj", "fc1", "fc2"
-        - Different architectures use different naming conventions
-
-        Hints:
-        - self.model.named_modules() gives you all modules with their full names
-        - isinstance(module, nn.Linear) identifies linear layers
-        - name.split(".")[-1] extracts just the layer name (e.g., "q_proj")
-        - self.model.config.model_type tells you the architecture
-        - Use rank0_print() to debug and see what's available
-        - If user specified lora_target_modules via command line, use those instead
+        """Select target modules for LoRA based on model architecture.
 
         Returns:
             List of module names to apply LoRA to (e.g., ["q_proj", "k_proj", "v_proj"])
         """
-        # ==================== TODO: Implement this method ====================
 
         # Check if user specified target modules via command line
         if self.lora_args.lora_target_modules:
@@ -520,7 +493,6 @@ class LoRAAdapterManager:
 
         rank0_print(f"Selected LoRA target modules: {valid_targets}")
 
-        # =====================================================================
         return valid_targets
 
 
