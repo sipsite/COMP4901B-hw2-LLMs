@@ -414,15 +414,12 @@ class LoRAAdapterManager:
             target_modules=target_modules,
         )
 
-        # ======================= TODO: Apply LoRA to model =========================
-        # Your task: Apply the LoRA configuration to the model
-        #
-        # The lora_config is already created above with all the parameters.
-        # You need to use the appropriate function from the peft library to wrap
-        # the model with LoRA adapters.
-        #
-        # Hint: Look at the imports at the top of this file
-        # =======================================================================
+        self.model = get_peft_model(self.model, lora_config)
+
+        # Print trainable parameters info
+        trainable_params = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
+        total_params = sum(p.numel() for p in self.model.parameters())
+        rank0_print(f"LoRA applied. Trainable params: {trainable_params:,} / {total_params:,} ({100 * trainable_params / total_params:.2f}%)")
 
         return self.model
 
@@ -460,8 +457,70 @@ class LoRAAdapterManager:
         """
         # ==================== TODO: Implement this method ====================
 
+        # Check if user specified target modules via command line
+        if self.lora_args.lora_target_modules:
+            user_modules = [m.strip() for m in self.lora_args.lora_target_modules.split(",")]
+            rank0_print(f"Using user-specified LoRA target modules: {user_modules}")
+            return user_modules
+
+        # Step 1: Find all linear layers in the model
+        linear_layer_names = set()
+        for name, module in self.model.named_modules():
+            if isinstance(module, nn.Linear):
+                # Extract just the layer name (e.g., "model.layers.0.self_attn.q_proj" -> "q_proj")
+                layer_name = name.split(".")[-1]
+                linear_layer_names.add(layer_name)
+
+        rank0_print(f"Found linear layers: {sorted(linear_layer_names)}")
+
+        # Step 2: Detect model architecture type
+        model_type = getattr(self.model.config, "model_type", "unknown").lower()
+        rank0_print(f"Detected model type: {model_type}")
+
+        # Step 3: Select appropriate modules based on architecture
+        # Define target modules for different architectures
+        architecture_targets = {
+            # Llama-style architectures (Llama, Llama2, Llama3, Qwen, Qwen2, Qwen3, Mistral)
+            "llama": ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
+            "qwen": ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
+            "qwen2": ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
+            "qwen3": ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
+            "mistral": ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
+            # OPT-style architectures
+            "opt": ["q_proj", "k_proj", "v_proj", "out_proj", "fc1", "fc2"],
+            # GPT-2 style
+            "gpt2": ["c_attn", "c_proj", "c_fc"],
+            # Default fallback: attention projections only
+            "default": ["q_proj", "k_proj", "v_proj", "o_proj"]
+        }
+
+        # Get target modules for the detected architecture
+        if model_type in architecture_targets:
+            candidate_modules = architecture_targets[model_type]
+        else:
+            # Try to match partial model type (e.g., "qwen2_moe" -> "qwen2")
+            matched = False
+            for arch_key in architecture_targets:
+                if arch_key in model_type:
+                    candidate_modules = architecture_targets[arch_key]
+                    matched = True
+                    break
+            if not matched:
+                candidate_modules = architecture_targets["default"]
+                rank0_print(f"Unknown architecture '{model_type}', using default modules")
+
+        # Step 4: Validate that selected modules actually exist in the model
+        valid_targets = [m for m in candidate_modules if m in linear_layer_names]
+
+        if not valid_targets:
+            # Fallback: use all linear layers except embeddings
+            valid_targets = [m for m in linear_layer_names
+                           if m not in ["embed_tokens", "lm_head", "wte", "wpe"]]
+            rank0_print(f"No matching modules found, using all linear layers: {valid_targets}")
+
+        rank0_print(f"Selected LoRA target modules: {valid_targets}")
+
         # =====================================================================
-        valid_targets = []  # Replace with your implementation
         return valid_targets
 
 

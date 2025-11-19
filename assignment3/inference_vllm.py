@@ -104,28 +104,41 @@ def format_prompts(
     """
     formatted_prompts = []
 
-    # ======================= TODO: Implement this method =========================
-    # Your task: Format each question into a prompt suitable for the model
-    #
-    # Steps:
-    # 1. For each question:
-    #    a. Choose the appropriate prompt template based on use_few_shot flag
-    #       - FEW_SHOT_PROMPT: includes 8 example Q&A pairs (defined above)
-    #       - ZERO_SHOT_PROMPT: just the question with instruction (defined above)
-    #    b. Format the template with the question using .format(question=...)
-    #
-    # 2. If use_chat_template is True and tokenizer is provided:
-    #    - Create a messages list in chat format (list of dicts with "role" and "content")
-    #    - If system_message is provided, add {"role": "system", "content": system_message}
-    #    - Add the formatted prompt as {"role": "user", "content": formatted_prompt}
-    #    - Apply tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-    #    - Wrap in try-except to handle models that don't support chat templates
-    #
-    # 3. Otherwise: use the formatted prompt directly (without chat template)
-    #
-    # Hint: The chat template transforms messages into the model's expected format
-    # (e.g., "<|im_start|>user\n{content}<|im_end|>" for Qwen models)
-    # =======================================================================
+    for question in questions:
+        # Step 1: Choose template and format
+        if use_few_shot:
+            prompt = FEW_SHOT_PROMPT.format(question=question)
+        else:
+            prompt = ZERO_SHOT_PROMPT.format(question=question)
+
+        # Step 2: Apply chat template if requested
+        if use_chat_template and tokenizer is not None:
+            try:
+                messages = []
+                if system_message:
+                    messages.append({"role": "system", "content": system_message})
+                messages.append({"role": "user", "content": prompt})
+
+                # Apply chat template with thinking mode support for Qwen3
+                if enable_thinking:
+                    prompt = tokenizer.apply_chat_template(
+                        messages,
+                        tokenize=False,
+                        add_generation_prompt=True,
+                        enable_thinking=True
+                    )
+                else:
+                    prompt = tokenizer.apply_chat_template(
+                        messages,
+                        tokenize=False,
+                        add_generation_prompt=True
+                    )
+            except Exception as e:
+                # Fall back to raw prompt if chat template fails
+                logger.warning(f"Chat template failed: {e}, using raw prompt")
+
+        formatted_prompts.append(prompt)
+
     return formatted_prompts
 
 
@@ -216,27 +229,27 @@ def run_inference(
 
     # Initialize VLLM
     logger.info("Initializing VLLM engine")
-    # ======================= TODO: Implement VLLM inference =========================
-    # Your task: Use VLLM to generate model outputs for the formatted prompts
-    #
-    # Steps:
-    # 1. Initialize the VLLM LLM engine with appropriate parameters
-    #    (model path, tensor parallelism, memory utilization, etc.)
-    #
-    # 2. Configure sampling parameters:
-    #    - Consider the difference between greedy decoding (temperature=0.0) and
-    #      sampling-based generation (temperature>0.0)
-    #    - When temperature=0.0: deterministic, always picks highest probability token
-    #    - When temperature>0.0: stochastic, samples from probability distribution
-    #    - For multiple rollouts (n_rollouts>1), you typically want temperature>0.0
-    #      to get diverse outputs
-    #
-    # 3. Generate outputs using the LLM engine with the formatted prompts
-    #    Store the results in a variable named "outputs"
-    #
-    # Hint: Check the VLLM documentation for LLM and SamplingParams classes
-    # can refer to https://docs.vllm.ai/en/stable/getting_started/quickstart.html
-    # =======================================================================
+
+    # Step 1: Initialize VLLM LLM engine
+    llm = LLM(
+        model=model_path,
+        tensor_parallel_size=tensor_parallel_size,
+        gpu_memory_utilization=gpu_memory_utilization,
+        trust_remote_code=True,
+    )
+
+    # Step 2: Configure sampling parameters
+    sampling_params = SamplingParams(
+        temperature=temperature,
+        top_p=top_p,
+        top_k=top_k,
+        max_tokens=max_tokens,
+        n=n_rollouts,  # Number of output sequences per prompt
+    )
+
+    # Step 3: Generate outputs
+    logger.info(f"Generating outputs for {len(formatted_prompts)} prompts...")
+    outputs = llm.generate(formatted_prompts, sampling_params)
 
 
     # Save results
